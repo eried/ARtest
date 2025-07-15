@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>AR Destination Pointer</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -32,12 +34,13 @@
     </div>
 
     <div id="ar-container">
-        <video id="camera-feed" playsinline autoplay></video>
+        <video id="camera-feed" playsinline autoplay muted></video>
         <canvas id="ar-overlay"></canvas>
         <div id="info-panel">
             <div id="distance-display">Distance: Calculating...</div>
             <div id="direction-display">Direction: Calculating...</div>
             <div id="coords-display">Target: 69.705561, 18.832721, 488.8m</div>
+            <div id="orientation-display">Orientation: Waiting...</div>
         </div>
     </div>
 

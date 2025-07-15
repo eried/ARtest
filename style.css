@@ -10,6 +10,11 @@ body {
     width: 100vw;
     height: 100vh;
     background-color: #000;
+    margin: 0;
+    padding: 0;
+    position: fixed;
+    top: 0;
+    left: 0;
 }
 
 .overlay {
@@ -59,25 +64,34 @@ p {
 }
 
 #ar-container {
-    position: relative;
-    width: 100%;
-    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
+    z-index: 1;
 }
 
 #camera-feed {
     position: absolute;
-    width: 100%;
-    height: 100%;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     object-fit: cover;
     z-index: 1;
+    background-color: #000;
 }
 
 #ar-overlay {
     position: absolute;
-    width: 100%;
-    height: 100%;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     z-index: 2;
+    pointer-events: none;
 }
 
 #info-panel {
