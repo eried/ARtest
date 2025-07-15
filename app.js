@@ -73,8 +73,8 @@ async function requestCameraAccess() {
         const constraints = {
             video: {
                 facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
+                width: { ideal: window.innerWidth, max: 1280 },
+                height: { ideal: window.innerHeight, max: 720 }
             },
             audio: false
         };
@@ -211,18 +211,32 @@ function handleOrientation(event) {
         return;
     }
     
-    // Update orientation values
-    deviceOrientation.alpha = event.alpha || 0; // Compass direction (0-360)
-    deviceOrientation.beta = event.beta || 0;   // Front/back tilt (-180-180)
-    deviceOrientation.gamma = event.gamma || 0; // Left/right tilt (-90-90)
+    // Apply smoothing to reduce jitter
+    const smoothingFactor = 0.2;
+    
+    // Update orientation values with smoothing
+    deviceOrientation.alpha = deviceOrientation.alpha + (event.alpha - deviceOrientation.alpha) * smoothingFactor;
+    deviceOrientation.beta = deviceOrientation.beta + (event.beta - deviceOrientation.beta) * smoothingFactor;
+    deviceOrientation.gamma = deviceOrientation.gamma + (event.gamma - deviceOrientation.gamma) * smoothingFactor;
     
     // Calculate compass heading
+    let newCompassHeading;
     if (event.webkitCompassHeading) {
         // iOS Safari
-        compassHeading = event.webkitCompassHeading;
+        newCompassHeading = event.webkitCompassHeading;
     } else if (event.alpha !== null) {
         // Android Chrome and others
-        compassHeading = 360 - deviceOrientation.alpha;
+        newCompassHeading = 360 - deviceOrientation.alpha;
+    }
+    
+    // Apply smoothing to compass heading
+    if (newCompassHeading !== undefined) {
+        // Handle wrap-around for compass heading
+        let diff = newCompassHeading - compassHeading;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        
+        compassHeading = (compassHeading + diff * smoothingFactor + 360) % 360;
     }
     
     // Log orientation data for debugging (limit to avoid spam)
@@ -310,8 +324,8 @@ function initThreeJS() {
     // Create scene
     scene = new THREE.Scene();
     
-    // Create camera (perspective)
-    const fov = 75;
+    // Create camera (perspective) - wider FOV for less zoom
+    const fov = 90; // Increased from 75 for wider view
     const aspect = window.innerWidth / window.innerHeight;
     const near = 0.1;
     const far = 1000;
@@ -329,23 +343,35 @@ function initThreeJS() {
     renderer.setClearColor(0x000000, 0); // Transparent background
     
     // Create destination marker (red sphere with glow effect)
-    const geometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const geometry = new THREE.SphereGeometry(0.2, 16, 16);
     const material = new THREE.MeshBasicMaterial({ 
         color: 0xff0000,
         transparent: true,
-        opacity: 0.8
+        opacity: 0.9
     });
     destinationMarker = new THREE.Mesh(geometry, material);
     
-    // Add a wireframe for better visibility
-    const wireframeMaterial = new THREE.MeshBasicMaterial({ 
-        color: 0xffffff, 
-        wireframe: true,
+    // Add a larger outer sphere for better visibility
+    const outerGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+    const outerMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xff0000,
         transparent: true,
-        opacity: 0.3
+        opacity: 0.3,
+        wireframe: true
     });
-    const wireframe = new THREE.Mesh(geometry, wireframeMaterial);
-    destinationMarker.add(wireframe);
+    const outerSphere = new THREE.Mesh(outerGeometry, outerMaterial);
+    destinationMarker.add(outerSphere);
+    
+    // Add a pulsing effect
+    const pulseGeometry = new THREE.SphereGeometry(0.3, 16, 16);
+    const pulseMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.2,
+        wireframe: true
+    });
+    const pulseRing = new THREE.Mesh(pulseGeometry, pulseMaterial);
+    destinationMarker.add(pulseRing);
     
     scene.add(destinationMarker);
     
@@ -436,8 +462,8 @@ function updateMarkerPosition() {
     // Convert to radians
     const angleRad = (relativeBearing * Math.PI) / 180;
     
-    // Calculate position in 3D space
-    const radius = 5; // Distance from camera
+    // Calculate position in 3D space - closer to camera for better visibility
+    const radius = 3; // Reduced from 5 for closer positioning
     const x = radius * Math.sin(angleRad);
     const z = -radius * Math.cos(angleRad);
     
@@ -450,21 +476,45 @@ function updateMarkerPosition() {
         TARGET.lng
     );
     
-    // Calculate elevation angle
+    // Calculate elevation angle with dampening for smoother movement
     const elevationAngle = Math.atan2(altitudeDiff, distance);
-    const y = radius * Math.sin(elevationAngle);
+    const maxElevation = Math.PI / 6; // Limit to 30 degrees up/down
+    const clampedElevation = Math.max(-maxElevation, Math.min(maxElevation, elevationAngle));
+    const y = radius * Math.sin(clampedElevation);
+    
+    // Apply smoothing to reduce jitter
+    const smoothingFactor = 0.1;
+    const currentPos = destinationMarker.position;
+    const targetX = currentPos.x + (x - currentPos.x) * smoothingFactor;
+    const targetY = currentPos.y + (y - currentPos.y) * smoothingFactor;
+    const targetZ = currentPos.z + (z - currentPos.z) * smoothingFactor;
     
     // Set marker position
-    destinationMarker.position.set(x, y, z);
+    destinationMarker.position.set(targetX, targetY, targetZ);
     
     // Make marker face the camera
     destinationMarker.lookAt(camera.position);
     
-    console.log(`Marker position: x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}, bearing=${bearing.toFixed(1)}°, relative=${relativeBearing.toFixed(1)}°`);
+    // Log less frequently to reduce console spam
+    if (Math.random() < 0.005) { // Log ~0.5% of updates
+        console.log(`Marker position: x=${targetX.toFixed(2)}, y=${targetY.toFixed(2)}, z=${targetZ.toFixed(2)}, bearing=${bearing.toFixed(1)}°, relative=${relativeBearing.toFixed(1)}°`);
+    }
 }
 
 // Animation loop
 function animate() {
     requestAnimationFrame(animate);
+    
+    // Add pulsing effect to destination marker
+    if (destinationMarker) {
+        const time = Date.now() * 0.005;
+        const pulseRing = destinationMarker.children[1]; // The pulse ring
+        if (pulseRing) {
+            const scale = 1 + Math.sin(time) * 0.3;
+            pulseRing.scale.set(scale, scale, scale);
+            pulseRing.material.opacity = 0.2 + Math.sin(time * 2) * 0.1;
+        }
+    }
+    
     renderer.render(scene, camera);
 }
