@@ -124,3 +124,78 @@ p {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Compass indicator styles */
+#compass-container {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 4;
+    text-align: center;
+}
+
+#compass-circle {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.5);
+    margin: 0 auto 10px;
+}
+
+#compass-needle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 2px;
+    height: 30px;
+    background-color: #ff0000;
+    transform-origin: bottom center;
+    transform: translate(-50%, -100%);
+    transition: transform 0.3s ease;
+}
+
+.compass-mark {
+    position: absolute;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.compass-mark.north {
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.compass-mark.south {
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.compass-mark.east {
+    right: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.compass-mark.west {
+    left: 2px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#compass-display {
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 5px 10px;
+    border-radius: 5px;
+    display: inline-block;
+}

@@ -27,6 +27,7 @@ let deviceOrientation = {
     gamma: 0
 };
 let compassHeading = 0;
+let screenOrientation = 0; // Track screen orientation
 
 // Three.js variables
 let scene, camera, renderer;
@@ -192,7 +193,32 @@ function setupOrientationListeners() {
     // Device motion (accelerometer)
     window.addEventListener('devicemotion', handleMotion, true);
     
+    // Screen orientation changes
+    window.addEventListener('orientationchange', handleScreenOrientationChange, true);
+    
+    // Initialize screen orientation
+    handleScreenOrientationChange();
+    
     console.log('Orientation listeners set up');
+}
+
+// Handle screen orientation changes
+function handleScreenOrientationChange() {
+    // Get screen orientation
+    if (screen.orientation) {
+        screenOrientation = screen.orientation.angle;
+    } else if (window.orientation !== undefined) {
+        screenOrientation = window.orientation;
+    } else {
+        screenOrientation = 0;
+    }
+    
+    console.log('Screen orientation:', screenOrientation);
+    
+    // Update marker position after orientation change
+    setTimeout(() => {
+        updateMarkerPosition();
+    }, 100);
 }
 
 // Handle device motion (accelerometer)
@@ -211,46 +237,51 @@ function handleOrientation(event) {
         return;
     }
     
-    // Apply smoothing to reduce jitter
-    const smoothingFactor = 0.2;
+    // Update orientation values
+    deviceOrientation.alpha = event.alpha || 0; // Compass direction (0-360)
+    deviceOrientation.beta = event.beta || 0;   // Front/back tilt (-180-180)
+    deviceOrientation.gamma = event.gamma || 0; // Left/right tilt (-90-90)
     
-    // Update orientation values with smoothing
-    deviceOrientation.alpha = deviceOrientation.alpha + (event.alpha - deviceOrientation.alpha) * smoothingFactor;
-    deviceOrientation.beta = deviceOrientation.beta + (event.beta - deviceOrientation.beta) * smoothingFactor;
-    deviceOrientation.gamma = deviceOrientation.gamma + (event.gamma - deviceOrientation.gamma) * smoothingFactor;
-    
-    // Calculate compass heading
-    let newCompassHeading;
+    // Calculate compass heading based on screen orientation
+    let rawCompassHeading;
     if (event.webkitCompassHeading) {
         // iOS Safari
-        newCompassHeading = event.webkitCompassHeading;
+        rawCompassHeading = event.webkitCompassHeading;
     } else if (event.alpha !== null) {
         // Android Chrome and others
-        newCompassHeading = 360 - deviceOrientation.alpha;
+        rawCompassHeading = 360 - deviceOrientation.alpha;
     }
     
-    // Apply smoothing to compass heading
-    if (newCompassHeading !== undefined) {
-        // Handle wrap-around for compass heading
-        let diff = newCompassHeading - compassHeading;
-        if (diff > 180) diff -= 360;
-        if (diff < -180) diff += 360;
-        
-        compassHeading = (compassHeading + diff * smoothingFactor + 360) % 360;
-    }
-    
-    // Log orientation data for debugging (limit to avoid spam)
-    if (Math.random() < 0.01) { // Log ~1% of events
-        console.log('Orientation:', {
-            alpha: deviceOrientation.alpha.toFixed(1),
-            beta: deviceOrientation.beta.toFixed(1),
-            gamma: deviceOrientation.gamma.toFixed(1),
-            compassHeading: compassHeading.toFixed(1)
-        });
+    // Adjust compass heading based on screen orientation
+    if (rawCompassHeading !== undefined) {
+        compassHeading = (rawCompassHeading + screenOrientation + 360) % 360;
     }
     
     // Update marker position
     updateMarkerPosition();
+    
+    // Update compass display
+    updateCompassDisplay();
+}
+
+// Update compass display
+function updateCompassDisplay() {
+    const compassElement = document.getElementById('compass-display');
+    if (!compassElement) return;
+    
+    // Calculate which direction we're facing
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+    const index = Math.round(compassHeading / 45) % 8;
+    const direction = directions[index];
+    
+    // Update compass text
+    compassElement.textContent = `${direction} ${Math.round(compassHeading)}°`;
+    
+    // Update compass needle rotation
+    const needleElement = document.getElementById('compass-needle');
+    if (needleElement) {
+        needleElement.style.transform = `rotate(${compassHeading}deg)`;
+    }
 }
 
 // Calculate distance between two geographic points (Haversine formula)
@@ -313,7 +344,7 @@ function updateDistanceAndDirection() {
     // Update displays
     distanceDisplay.textContent = `Distance: ${Math.round(total3DDistance)} meters`;
     directionDisplay.textContent = `Direction: ${Math.round(bearing)}°`;
-    orientationDisplay.textContent = `Compass: ${Math.round(compassHeading)}°`;
+    orientationDisplay.textContent = `Screen: ${screenOrientation}°`;
     
     // Update marker position if Three.js is initialized
     updateMarkerPosition();
@@ -459,15 +490,45 @@ function updateMarkerPosition() {
     while (relativeBearing > 180) relativeBearing -= 360;
     while (relativeBearing < -180) relativeBearing += 360;
     
+    // Adjust for screen orientation
+    let adjustedBearing = relativeBearing;
+    switch (screenOrientation) {
+        case 90:  // Landscape left
+            adjustedBearing = relativeBearing - 90;
+            break;
+        case -90: // Landscape right
+            adjustedBearing = relativeBearing + 90;
+            break;
+        case 180: // Portrait upside down
+            adjustedBearing = relativeBearing + 180;
+            break;
+        default:  // Portrait (0 degrees)
+            adjustedBearing = relativeBearing;
+            break;
+    }
+    
+    // Normalize adjusted bearing
+    while (adjustedBearing > 180) adjustedBearing -= 360;
+    while (adjustedBearing < -180) adjustedBearing += 360;
+    
     // Convert to radians
-    const angleRad = (relativeBearing * Math.PI) / 180;
+    const angleRad = (adjustedBearing * Math.PI) / 180;
     
-    // Calculate position in 3D space - closer to camera for better visibility
-    const radius = 3; // Reduced from 5 for closer positioning
-    const x = radius * Math.sin(angleRad);
-    const z = -radius * Math.cos(angleRad);
+    // Calculate position in 3D space
+    const radius = 3; // Distance from camera
+    let x, z;
     
-    // Calculate y position based on altitude difference
+    if (screenOrientation === 90 || screenOrientation === -90) {
+        // Landscape mode - use beta for vertical movement
+        x = radius * Math.sin(angleRad);
+        z = -radius * Math.cos(angleRad);
+    } else {
+        // Portrait mode - normal calculation
+        x = radius * Math.sin(angleRad);
+        z = -radius * Math.cos(angleRad);
+    }
+    
+    // Calculate y position based on altitude difference and device tilt
     const altitudeDiff = TARGET.alt - (currentLocation.alt || 0);
     const distance = calculateDistance(
         currentLocation.lat, 
@@ -476,28 +537,24 @@ function updateMarkerPosition() {
         TARGET.lng
     );
     
-    // Calculate elevation angle with dampening for smoother movement
+    // Calculate elevation angle
     const elevationAngle = Math.atan2(altitudeDiff, distance);
-    const maxElevation = Math.PI / 6; // Limit to 30 degrees up/down
-    const clampedElevation = Math.max(-maxElevation, Math.min(maxElevation, elevationAngle));
-    const y = radius * Math.sin(clampedElevation);
     
-    // Apply smoothing to reduce jitter
-    const smoothingFactor = 0.1;
-    const currentPos = destinationMarker.position;
-    const targetX = currentPos.x + (x - currentPos.x) * smoothingFactor;
-    const targetY = currentPos.y + (y - currentPos.y) * smoothingFactor;
-    const targetZ = currentPos.z + (z - currentPos.z) * smoothingFactor;
+    // Adjust for device tilt (beta angle)
+    const tiltRadians = (deviceOrientation.beta * Math.PI) / 180;
+    const adjustedElevation = elevationAngle - tiltRadians;
+    
+    const y = radius * Math.sin(adjustedElevation);
     
     // Set marker position
-    destinationMarker.position.set(targetX, targetY, targetZ);
+    destinationMarker.position.set(x, y, z);
     
     // Make marker face the camera
     destinationMarker.lookAt(camera.position);
     
     // Log less frequently to reduce console spam
     if (Math.random() < 0.005) { // Log ~0.5% of updates
-        console.log(`Marker position: x=${targetX.toFixed(2)}, y=${targetY.toFixed(2)}, z=${targetZ.toFixed(2)}, bearing=${bearing.toFixed(1)}°, relative=${relativeBearing.toFixed(1)}°`);
+        console.log(`Marker position: x=${x.toFixed(2)}, y=${y.toFixed(2)}, z=${z.toFixed(2)}, bearing=${bearing.toFixed(1)}°, adjusted=${adjustedBearing.toFixed(1)}°, orientation=${screenOrientation}°`);
     }
 }
 
@@ -515,6 +572,9 @@ function animate() {
             pulseRing.material.opacity = 0.2 + Math.sin(time * 2) * 0.1;
         }
     }
+    
+    // Update compass display
+    updateCompassDisplay();
     
     renderer.render(scene, camera);
 }
