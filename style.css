@@ -94,20 +94,70 @@ p {
     pointer-events: none;
 }
 
-#info-panel {
+/* Rolling compass strip */
+#compass-strip {
     position: absolute;
-    top: 20px;
-    left: 20px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    padding: 15px;
-    border-radius: 10px;
-    z-index: 3;
-    font-size: 0.9em;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.9));
+    border-top: 1px solid rgba(255,255,255,0.3);
+    overflow: hidden;
+    z-index: 4;
 }
 
-#info-panel div {
-    margin-bottom: 5px;
+#compass-content {
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    transition: transform 0.3s ease;
+}
+
+.compass-mark {
+    position: relative;
+    color: white;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+    flex: 0 0 auto;
+    text-align: center;
+    padding: 0 15px;
+}
+
+.compass-mark.major {
+    font-size: 18px;
+    color: #ff4444;
+}
+
+.compass-mark.minor {
+    font-size: 12px;
+    color: #cccccc;
+}
+
+#compass-indicator {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, #ff0000, transparent);
+    z-index: 5;
+}
+
+#compass-indicator::before {
+    content: '';
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 10px solid #ff0000;
 }
 
 .spinner {
@@ -123,79 +173,4 @@ p {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-/* Compass indicator styles */
-#compass-container {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 4;
-    text-align: center;
-}
-
-#compass-circle {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    border: 2px solid rgba(255, 255, 255, 0.8);
-    border-radius: 50%;
-    background-color: rgba(0, 0, 0, 0.5);
-    margin: 0 auto 10px;
-}
-
-#compass-needle {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 2px;
-    height: 30px;
-    background-color: #ff0000;
-    transform-origin: bottom center;
-    transform: translate(-50%, -100%);
-    transition: transform 0.3s ease;
-}
-
-.compass-mark {
-    position: absolute;
-    color: white;
-    font-size: 12px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-.compass-mark.north {
-    top: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.compass-mark.south {
-    bottom: 2px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.compass-mark.east {
-    right: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-.compass-mark.west {
-    left: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-}
-
-#compass-display {
-    color: white;
-    font-size: 14px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 5px 10px;
-    border-radius: 5px;
-    display: inline-block;
 }

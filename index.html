@@ -36,21 +36,23 @@
     <div id="ar-container">
         <video id="camera-feed" playsinline autoplay muted></video>
         <canvas id="ar-overlay"></canvas>
-        <div id="info-panel">
-            <div id="distance-display">Distance: Calculating...</div>
-            <div id="direction-display">Direction: Calculating...</div>
-            <div id="coords-display">Target: 69.705561, 18.832721, 488.8m</div>
-            <div id="orientation-display">Orientation: Waiting...</div>
-        </div>
-        <div id="compass-container">
-            <div id="compass-circle">
-                <div id="compass-needle"></div>
-                <div class="compass-mark north">N</div>
-                <div class="compass-mark south">S</div>
-                <div class="compass-mark east">E</div>
-                <div class="compass-mark west">W</div>
+        <div id="compass-strip">
+            <div id="compass-content">
+                <div class="compass-mark major">N</div>
+                <div class="compass-mark minor">30</div>
+                <div class="compass-mark minor">60</div>
+                <div class="compass-mark major">E</div>
+                <div class="compass-mark minor">120</div>
+                <div class="compass-mark minor">150</div>
+                <div class="compass-mark major">S</div>
+                <div class="compass-mark minor">210</div>
+                <div class="compass-mark minor">240</div>
+                <div class="compass-mark major">W</div>
+                <div class="compass-mark minor">300</div>
+                <div class="compass-mark minor">330</div>
+                <div class="compass-mark major">N</div>
             </div>
-            <div id="compass-display">N 0°</div>
+            <div id="compass-indicator"></div>
         </div>
     </div>
 
